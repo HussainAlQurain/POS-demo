@@ -28,6 +28,7 @@ public class PosController {
         model.addAttribute("products", products);
         model.addAttribute("sales", allSales);
         model.addAttribute("newSale", new Sale());
+        model.addAttribute("newProduct", new Product());
         
         return "index"; // => index.html in templates folder
     }
@@ -45,6 +46,14 @@ public class PosController {
     public ResponseEntity<Sale> createSaleApi(@RequestBody Sale sale) {
         Sale createdSale = posService.createSale(sale);
         return ResponseEntity.ok(createdSale);
+    }
+    
+    // Create a new product
+    @PostMapping(value = "/api/products", consumes = "application/json", produces = "application/json")
+    @ResponseBody
+    public ResponseEntity<Product> createProductApi(@RequestBody Product product) {
+        Product createdProduct = posService.createProduct(product);
+        return ResponseEntity.ok(createdProduct);
     }
     
     // Get all products as JSON (for AJAX calls)

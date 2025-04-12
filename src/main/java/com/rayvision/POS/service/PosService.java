@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 @Service
 public class PosService {
@@ -20,6 +21,7 @@ public class PosService {
     private final ProductRepository productRepository;
     private final SaleRepository saleRepository;
     private final InvoiceNumberService invoiceNumberService;
+    private final Random random = new Random();
     
     public PosService(ProductRepository productRepository, SaleRepository saleRepository, InvoiceNumberService invoiceNumberService) {
         this.productRepository = productRepository;
@@ -33,6 +35,26 @@ public class PosService {
     
     public Optional<Product> getProductByPosCode(String posCode) {
         return productRepository.findByPosCode(posCode);
+    }
+    
+    @Transactional
+    public Product createProduct(Product product) {
+        // If no POS code provided, generate a random one that doesn't exist yet
+        if (product.getPosCode() == null || product.getPosCode().isEmpty()) {
+            String posCode;
+            do {
+                // Generate a random 6-digit POS code
+                posCode = String.format("%06d", random.nextInt(1000000));
+            } while (productRepository.findByPosCode(posCode).isPresent());
+            product.setPosCode(posCode);
+        }
+        
+        // Set default stock if not provided
+        if (product.getStock() == null) {
+            product.setStock(100);
+        }
+        
+        return productRepository.save(product);
     }
     
     @Transactional

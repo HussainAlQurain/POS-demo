@@ -83,12 +83,54 @@
                 Simple POS System
             </a>
             <div class="ms-auto">
+                <button type="button" class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#productModal">
+                    <i class="fas fa-plus-circle me-1"></i> New Product
+                </button>
                 <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#simulatorModal">
                     <i class="fas fa-robot me-1"></i> Simulator Controls
                 </button>
             </div>
         </div>
     </nav>
+
+    <!-- New Product Modal -->
+    <div class="modal fade" id="productModal" tabindex="-1" aria-labelledby="productModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="productModalLabel">Create New Product</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="newProductForm">
+                        <div class="mb-3">
+                            <label for="productName" class="form-label">Product Name</label>
+                            <input type="text" class="form-control" id="productName" name="name" required>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productPrice" class="form-label">Price</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" step="0.01" min="0.01" class="form-control" id="productPrice" name="price" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="productPosCode" class="form-label">POS Code (Optional)</label>
+                            <input type="text" class="form-control" id="productPosCode" name="posCode" placeholder="Leave blank to generate automatically">
+                        </div>
+                        <div class="mb-3">
+                            <label for="productStock" class="form-label">Stock</label>
+                            <input type="number" min="0" step="1" class="form-control" id="productStock" name="stock" value="100">
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" id="saveProductBtn">Save Product</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- Simulator Modal -->
     <div class="modal fade" id="simulatorModal" tabindex="-1" aria-labelledby="simulatorModalLabel" aria-hidden="true">
@@ -309,6 +351,53 @@
             // Refresh sales history
             document.getElementById('refreshSalesBtn').addEventListener('click', function() {
                 window.location.reload();
+            });
+            
+            // Save new product
+            document.getElementById('saveProductBtn').addEventListener('click', function() {
+                const form = document.getElementById('newProductForm');
+                const formData = new FormData(form);
+                const product = {};
+                
+                formData.forEach((value, key) => {
+                    if (value.trim() !== '') {
+                        // Convert numeric values
+                        if (key === 'price') {
+                            product[key] = parseFloat(value);
+                        } else if (key === 'stock') {
+                            product[key] = parseInt(value, 10);
+                        } else {
+                            product[key] = value;
+                        }
+                    }
+                });
+                
+                // Send the product data to the server
+                fetch('/api/products', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(product)
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Close the modal and reload the page to show the new product
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('productModal'));
+                    modal.hide();
+                    
+                    // Reload the page
+                    window.location.reload();
+                })
+                .catch(error => {
+                    console.error('Error creating product:', error);
+                    alert('Failed to create product. Please try again.');
+                });
             });
         });
         
