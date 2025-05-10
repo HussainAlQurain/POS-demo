@@ -64,13 +64,13 @@ public class PosService {
             sale.setSaleDateTime(LocalDateTime.now());
         }
         
-        // Always set locationId to 1 as per requirements
+        // Set a default locationId if none is provided
         if (sale.getLocationId() == null) {
             sale.setLocationId(1L);
         }
         
-        // Generate a unique invoice number (regardless of what was provided)
-        sale.setPosReference(invoiceNumberService.generateNextInvoiceNumber());
+        // Generate a unique invoice number, possibly including location code
+        sale.setPosReference(invoiceNumberService.generateNextInvoiceNumber(sale.getLocationId()));
         
         // Process each sale line
         if (sale.getLines() != null) {
@@ -91,6 +91,20 @@ public class PosService {
     
     public List<Sale> getAllSales() {
         return saleRepository.findAll();
+    }
+    
+    /**
+     * Get sales for a specific location
+     */
+    public List<Sale> getSalesByLocation(Long locationId) {
+        return saleRepository.findByLocationId(locationId);
+    }
+    
+    /**
+     * Get sales for a specific location with pagination
+     */
+    public Page<Sale> getSalesByLocation(Long locationId, Pageable pageable) {
+        return saleRepository.findByLocationId(locationId, pageable);
     }
     
     /**
@@ -116,6 +130,14 @@ public class PosService {
     }
     
     /**
+     * Find sales for a specific location between two dates with pagination support
+     */
+    public Page<Sale> findSalesByLocationAndDateRange(
+            Long locationId, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable) {
+        return saleRepository.findByLocationIdAndSaleDateTimeBetween(locationId, startDate, endDate, pageable);
+    }
+    
+    /**
      * Count total sales between two dates
      * 
      * @param startDate The start date (inclusive)
@@ -124,5 +146,19 @@ public class PosService {
      */
     public long countSalesByDateRange(LocalDateTime startDate, LocalDateTime endDate) {
         return saleRepository.countBySaleDateTimeBetween(startDate, endDate);
+    }
+    
+    /**
+     * Count sales for a specific location
+     */
+    public long countSalesByLocation(Long locationId) {
+        return saleRepository.countByLocationId(locationId);
+    }
+    
+    /**
+     * Count sales for a specific location between two dates
+     */
+    public long countSalesByLocationAndDateRange(Long locationId, LocalDateTime startDate, LocalDateTime endDate) {
+        return saleRepository.countByLocationIdAndSaleDateTimeBetween(locationId, startDate, endDate);
     }
 }

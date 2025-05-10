@@ -1,7 +1,9 @@
 package com.rayvision.POS;
 
+import com.rayvision.POS.domain.Location;
 import com.rayvision.POS.domain.Product;
 import com.rayvision.POS.domain.Sale;
+import com.rayvision.POS.repository.LocationRepository;
 import com.rayvision.POS.service.PosService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -14,19 +16,32 @@ import java.util.List;
 @Controller
 public class PosController {
     private final PosService posService;
+    private final LocationRepository locationRepository;
 
-    public PosController(PosService posService) {
+    public PosController(PosService posService, LocationRepository locationRepository) {
         this.posService = posService;
+        this.locationRepository = locationRepository;
     }
 
     // Show the index page with product list and sales
     @GetMapping("/")
-    public String showIndex(Model model) {
+    public String showIndex(@RequestParam(required = false) Long locationId, Model model) {
         List<Product> products = posService.getAllProducts();
-        List<Sale> allSales = posService.getAllSales();
+        List<Sale> sales;
+        
+        // If locationId is provided, filter sales by location
+        if (locationId != null) {
+            sales = posService.getSalesByLocation(locationId);
+        } else {
+            sales = posService.getAllSales();
+        }
+        
+        // Get all locations for the location selector
+        List<Location> locations = locationRepository.findAll();
         
         model.addAttribute("products", products);
-        model.addAttribute("sales", allSales);
+        model.addAttribute("sales", sales);
+        model.addAttribute("locations", locations);
         model.addAttribute("newSale", new Sale());
         model.addAttribute("newProduct", new Product());
         

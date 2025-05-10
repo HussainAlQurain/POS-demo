@@ -73,6 +73,18 @@
         .status-disabled {
             background-color: #dc3545;
         }
+        .location-indicator {
+            font-size: 0.8rem;
+            color: #fff;
+            background-color: rgba(13, 110, 253, 0.8);
+            border-radius: 8px;
+            padding: 0.2rem 0.6rem;
+            margin-left: 10px;
+        }
+        .location-selector {
+            width: auto;
+            max-width: 200px;
+        }
     </style>
 </head>
 <body>
@@ -82,7 +94,16 @@
                 <i class="fas fa-cash-register me-2"></i>
                 Simple POS System
             </a>
-            <div class="ms-auto">
+            <div class="d-flex align-items-center">
+                <div class="input-group me-3 location-selector">
+                    <label class="input-group-text" for="locationSelect">
+                        <i class="fas fa-store"></i>
+                    </label>
+                    <select class="form-select" id="locationSelect">
+                        <option value="" selected>All Locations</option>
+                        <option th:each="location : ${locations}" th:value="${location.id}" th:text="${location.name + ' (' + location.code + ')'}"></option>
+                    </select>
+                </div>
                 <button type="button" class="btn btn-light btn-sm me-2" data-bs-toggle="modal" data-bs-target="#productModal">
                     <i class="fas fa-plus-circle me-1"></i> New Product
                 </button>
@@ -155,6 +176,16 @@
                     </div>
                     
                     <div class="mb-3">
+                        <div class="form-check form-switch mb-2">
+                            <input class="form-check-input" type="checkbox" id="multiLocationSwitch" checked>
+                            <label class="form-check-label" for="multiLocationSwitch">
+                                Enable multi-location simulation
+                            </label>
+                        </div>
+                        <p class="text-muted small">When enabled, simulator will generate sales across all locations.</p>
+                    </div>
+                    
+                    <div class="mb-3">
                         <label for="intervalRange" class="form-label">Interval (seconds): <span id="intervalValue">10</span></label>
                         <input type="range" class="form-range" min="1" max="30" value="10" id="intervalRange">
                         <div class="d-flex justify-content-between">
@@ -171,7 +202,65 @@
         </div>
     </div>
 
+    <!-- Location Info Modal -->
+    <div class="modal fade" id="locationInfoModal" tabindex="-1" aria-labelledby="locationInfoModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="locationInfoModalLabel">Location Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="locationDetails">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Name:</label>
+                            <p id="locationName"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Code:</label>
+                            <p id="locationCode"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Address:</label>
+                            <p id="locationAddress"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">City:</label>
+                            <p id="locationCity"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">State:</label>
+                            <p id="locationState"></p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Phone:</label>
+                            <p id="locationPhone"></p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="container">
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-primary d-flex align-items-center" role="alert">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <div>
+                        Currently viewing: 
+                        <span id="currentLocationDisplay">All Locations</span>
+                        <button type="button" class="btn btn-sm btn-outline-primary ms-3" id="viewLocationDetailsBtn">
+                            <i class="fas fa-info-circle"></i> Location Details
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <div class="row">
             <!-- Products Section -->
             <div class="col-md-7">
@@ -207,7 +296,7 @@
                     </div>
                     <div class="card-body">
                         <form action="#" th:action="@{/sales}" method="post" id="sale-form">
-                            <input type="hidden" name="locationId" value="1" />
+                            <input type="hidden" name="locationId" id="selectedLocationId" value="1" />
                             <input type="hidden" name="posReference" value="default-pos" />
                             
                             <div class="table-responsive">
@@ -253,10 +342,22 @@
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h4 class="section-heading m-0"><i class="fas fa-history me-2"></i>Sales History</h4>
-                        <button id="refreshSalesBtn" class="btn btn-outline-primary btn-sm">
-                            <i class="fas fa-sync-alt me-1"></i> Refresh
-                        </button>
+                        <h4 class="section-heading m-0">
+                            <i class="fas fa-history me-2"></i>Sales History
+                            <span id="salesHistoryLocationIndicator" class="location-indicator"></span>
+                        </h4>
+                        <div>
+                            <select class="form-select form-select-sm d-inline-block me-2" style="width: auto;" id="salesDateFilter">
+                                <option value="today">Today</option>
+                                <option value="yesterday">Yesterday</option>
+                                <option value="week" selected>This Week</option>
+                                <option value="month">This Month</option>
+                                <option value="all">All Time</option>
+                            </select>
+                            <button id="refreshSalesBtn" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-sync-alt me-1"></i> Refresh
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -271,7 +372,7 @@
                                         <th>Details</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="salesTableBody">
                                     <tr th:each="sale : ${sales}">
                                         <td th:text="${sale.id}"></td>
                                         <td th:text="${#temporals.format(sale.saleDateTime, 'yyyy-MM-dd HH:mm')}"></td>
@@ -324,19 +425,19 @@
     <script>
         let lineIndex = 0;
         let total = 0;
+        let currentLocationId = 1; // Default to location 1
+        let locations = [];
+        let locationDetailsModal;
         
         document.addEventListener('DOMContentLoaded', function() {
+            // Initialize location details modal
+            locationDetailsModal = new bootstrap.Modal(document.getElementById('locationInfoModal'));
+            
+            // Load locations data
+            loadLocations();
+            
             // Add product to cart when clicked
-            const productItems = document.querySelectorAll('.product-item');
-            productItems.forEach(item => {
-                item.addEventListener('click', function() {
-                    const posCode = this.getAttribute('data-pos-code');
-                    const name = this.getAttribute('data-name');
-                    const price = parseFloat(this.getAttribute('data-price'));
-                    
-                    addToCart(posCode, name, price);
-                });
-            });
+            setupProductClickHandlers();
             
             // Clear cart button
             document.getElementById('clear-cart').addEventListener('click', function() {
@@ -350,7 +451,31 @@
 
             // Refresh sales history
             document.getElementById('refreshSalesBtn').addEventListener('click', function() {
-                window.location.reload();
+                loadSalesData();
+            });
+            
+            // Location selector change event
+            document.getElementById('locationSelect').addEventListener('change', function() {
+                const locationId = this.value;
+                if (locationId) {
+                    setCurrentLocation(parseInt(locationId));
+                } else {
+                    setCurrentLocation(null);
+                }
+            });
+            
+            // Date filter change event
+            document.getElementById('salesDateFilter').addEventListener('change', function() {
+                loadSalesData();
+            });
+            
+            // View location details button
+            document.getElementById('viewLocationDetailsBtn').addEventListener('click', function() {
+                if (currentLocationId) {
+                    showLocationDetails(currentLocationId);
+                } else {
+                    alert('Please select a location first.');
+                }
             });
             
             // Save new product
@@ -400,6 +525,243 @@
                 });
             });
         });
+
+        // Function to set up click handlers for all product items
+        function setupProductClickHandlers() {
+            const productItems = document.querySelectorAll('.product-item');
+            productItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const posCode = this.getAttribute('data-pos-code');
+                    const name = this.getAttribute('data-name');
+                    const price = parseFloat(this.getAttribute('data-price'));
+                    
+                    addToCart(posCode, name, price);
+                });
+            });
+        }
+
+        function loadLocations() {
+            // Use the locations already loaded from the server-side
+            locations = [];
+            
+            // Convert the Thymeleaf model locations to JavaScript objects
+            document.querySelectorAll('#locationSelect option').forEach(option => {
+                if (option.value) { // Skip the "All Locations" option
+                    locations.push({
+                        id: parseInt(option.value),
+                        name: option.text.split(' (')[0],
+                        code: option.text.split(' (')[1].replace(')', '')
+                    });
+                }
+            });
+
+            // Set initial location to Location 1 if it exists
+            if (locations.length > 0) {
+                setCurrentLocation(1); // Default to location ID 1
+            }
+        }
+        
+        function setCurrentLocation(locationId) {
+            currentLocationId = locationId;
+            
+            // Update hidden input for form submission
+            document.getElementById('selectedLocationId').value = locationId || 1;
+            
+            // Update UI to show current location
+            const locationDisplayElement = document.getElementById('currentLocationDisplay');
+            const salesHistoryLocationIndicator = document.getElementById('salesHistoryLocationIndicator');
+            
+            if (locationId) {
+                // Find the location name
+                const location = locations.find(loc => loc.id === locationId);
+                if (location) {
+                    locationDisplayElement.textContent = location.name + ' (' + location.code + ')';
+                    salesHistoryLocationIndicator.textContent = location.code;
+                    document.getElementById('viewLocationDetailsBtn').style.display = 'inline-block';
+                }
+            } else {
+                locationDisplayElement.textContent = 'All Locations';
+                salesHistoryLocationIndicator.textContent = '';
+                document.getElementById('viewLocationDetailsBtn').style.display = 'none';
+            }
+            
+            // Load sales data for this location
+            loadSalesData();
+        }
+        
+        function showLocationDetails(locationId) {
+            const location = locations.find(loc => loc.id === locationId);
+            if (location) {
+                document.getElementById('locationName').textContent = location.name;
+                document.getElementById('locationCode').textContent = location.code;
+                document.getElementById('locationAddress').textContent = location.address || 'N/A';
+                document.getElementById('locationCity').textContent = location.city || 'N/A';
+                document.getElementById('locationState').textContent = location.state || 'N/A';
+                document.getElementById('locationPhone').textContent = location.phone || 'N/A';
+                
+                locationDetailsModal.show();
+            }
+        }
+        
+        // Fix the loadSalesData function to convert text date filters to ISO format dates
+        function loadSalesData() {
+            const dateFilter = document.getElementById('salesDateFilter').value;
+            let apiUrl = '/api/sales';
+            
+            // Add location filter if a specific location is selected
+            if (currentLocationId) {
+                apiUrl = `/api/sales/location/${currentLocationId}`;
+            }
+            
+            // Add date filter with properly formatted ISO dates
+            if (dateFilter !== 'all') {
+                // Get the ISO date strings based on filter
+                const dates = getDateRangeFromFilter(dateFilter);
+                apiUrl += `/date-range?startDate=${dates.startDate}&endDate=${dates.endDate}`;
+            }
+            
+            fetch(apiUrl)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok: ' + response.status);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    // Update sales table
+                    const salesData = data.content || data;
+                    populateSalesTable(salesData);
+                })
+                .catch(error => {
+                    console.error('Error loading sales data:', error);
+                    // Show a message in the sales table
+                    const salesTableBody = document.getElementById('salesTableBody');
+                    salesTableBody.innerHTML = `<tr><td colspan="6" class="text-center text-danger">Error loading sales data: ${error.message}</td></tr>`;
+                });
+        }
+        
+        // Helper function to get ISO date strings based on filter choice
+        function getDateRangeFromFilter(filter) {
+            const today = new Date();
+            let startDate, endDate;
+            
+            // Set end date to end of today
+            endDate = new Date(today);
+            endDate.setHours(23, 59, 59, 999);
+            
+            switch(filter) {
+                case 'today':
+                    // Start of today
+                    startDate = new Date(today);
+                    startDate.setHours(0, 0, 0, 0);
+                    break;
+                case 'yesterday':
+                    // Start of yesterday
+                    startDate = new Date(today);
+                    startDate.setDate(today.getDate() - 1);
+                    startDate.setHours(0, 0, 0, 0);
+                    // End of yesterday
+                    endDate = new Date(today);
+                    endDate.setDate(today.getDate() - 1);
+                    endDate.setHours(23, 59, 59, 999);
+                    break;
+                case 'week':
+                    // Start of current week (Monday)
+                    startDate = new Date(today);
+                    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
+                    const diff = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // Adjust for Monday as first day
+                    startDate.setDate(today.getDate() - diff);
+                    startDate.setHours(0, 0, 0, 0);
+                    break;
+                case 'month':
+                    // Start of current month
+                    startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                    startDate.setHours(0, 0, 0, 0);
+                    break;
+                default:
+                    startDate = new Date(today);
+                    startDate.setHours(0, 0, 0, 0);
+            }
+            
+            // Convert to ISO strings
+            return {
+                startDate: startDate.toISOString(),
+                endDate: endDate.toISOString()
+            };
+        }
+        
+        function populateSalesTable(salesData) {
+            const salesTableBody = document.getElementById('salesTableBody');
+            salesTableBody.innerHTML = '';
+            
+            if (salesData.length === 0) {
+                const row = document.createElement('tr');
+                row.innerHTML = '<td colspan="6" class="text-center">No sales found</td>';
+                salesTableBody.appendChild(row);
+                return;
+            }
+            
+            salesData.forEach(sale => {
+                const row = document.createElement('tr');
+                
+                // Format date
+                const saleDate = new Date(sale.saleDateTime);
+                const formattedDate = saleDate.toLocaleDateString() + ' ' + saleDate.toLocaleTimeString();
+                
+                row.innerHTML = `
+                    <td>${sale.id}</td>
+                    <td>${formattedDate}</td>
+                    <td>${sale.posReference}</td>
+                    <td>${sale.locationId}</td>
+                    <td>$${sale.total.toFixed(2)}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-info" type="button" data-bs-toggle="collapse" 
+                                data-bs-target="#saleDetails${sale.id}">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <div class="collapse mt-2" id="saleDetails${sale.id}">
+                            <div class="sale-details p-2 bg-light rounded">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Code</th>
+                                            <th>Item</th>
+                                            <th>Qty</th>
+                                            <th>Price</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="saleLines${sale.id}">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </td>
+                `;
+                
+                salesTableBody.appendChild(row);
+                
+                // Add sale lines
+                const saleLinesBody = document.getElementById(`saleLines${sale.id}`);
+                if (sale.lines && sale.lines.length > 0) {
+                    sale.lines.forEach(line => {
+                        const lineRow = document.createElement('tr');
+                        lineRow.innerHTML = `
+                            <td>${line.posCode}</td>
+                            <td>${line.menuItemName}</td>
+                            <td>${line.quantity}</td>
+                            <td>$${line.unitPrice.toFixed(2)}</td>
+                            <td>$${line.extended.toFixed(2)}</td>
+                        `;
+                        saleLinesBody.appendChild(lineRow);
+                    });
+                } else {
+                    const emptyRow = document.createElement('tr');
+                    emptyRow.innerHTML = '<td colspan="5" class="text-center">No line items</td>';
+                    saleLinesBody.appendChild(emptyRow);
+                }
+            });
+        }
         
         function addToCart(posCode, name, price) {
             const cartBody = document.getElementById('cart-body');
@@ -494,6 +856,9 @@
                     const intervalSeconds = data.intervalMillis / 1000;
                     document.getElementById('intervalRange').value = intervalSeconds;
                     document.getElementById('intervalValue').textContent = intervalSeconds;
+                    
+                    // Update multi-location switch
+                    document.getElementById('multiLocationSwitch').checked = data.locationsEnabled;
                 })
                 .catch(error => {
                     console.error('Error fetching simulator status:', error);
@@ -531,6 +896,20 @@
                 })
                 .catch(error => {
                     console.error('Error setting interval:', error);
+                });
+            });
+            
+            // Toggle multi-location simulation
+            document.getElementById('multiLocationSwitch').addEventListener('change', function() {
+                fetch(`/api/simulator/locations?enabled=${this.checked}`, {
+                    method: 'POST'
+                })
+                .then(response => response.json())
+                .then(data => {
+                    alert(data.enabled ? 'Multi-location simulation enabled' : 'Multi-location simulation disabled');
+                })
+                .catch(error => {
+                    console.error('Error toggling multi-location:', error);
                 });
             });
         }

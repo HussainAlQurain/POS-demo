@@ -124,6 +124,10 @@ To check if your locally running application is working correctly, you can visit
 curl http://localhost:8888
 ```
 
+- http://localhost:8888/api/sales/location/1?startDate=2025-04-01T00:00:00&endDate=2025-05-30T23:59:59&page=0&size=50
+- http://localhost:8888/api/sales/location/2?startDate=2025-04-01T00:00:00&endDate=2025-05-30T23:59:59&page=0&size=50
+
+
 You can stop the running application when you're done testing by finding and stopping the Java process.
 
 Would you like me to help you prepare any specific aspect of the AWS deployment in more detail?

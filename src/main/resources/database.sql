@@ -82,3 +82,61 @@
 --     FOREIGN KEY (location_id) REFERENCES location(id),
 --     FOREIGN KEY (user_id) REFERENCES users(id)
 -- );
+
+-- -- Update sale table to properly link to locations
+-- CREATE TABLE IF NOT EXISTS sale (
+--     id INT AUTO_INCREMENT PRIMARY KEY,
+--     sale_date_time DATETIME NOT NULL,
+--     pos_reference VARCHAR(255) NOT NULL,
+--     location_id INT NOT NULL,
+--     total DOUBLE,
+--     FOREIGN KEY (location_id) REFERENCES location(id)
+-- );
+
+-- -- Create sale_line table
+-- CREATE TABLE IF NOT EXISTS sale_line (
+--     id INT AUTO_INCREMENT PRIMARY KEY,
+--     pos_code VARCHAR(255),
+--     menu_item_name VARCHAR(255),
+--     quantity DOUBLE,
+--     unit_price DOUBLE,
+--     extended DOUBLE,
+--     sale_id INT,
+--     FOREIGN KEY (sale_id) REFERENCES sale(id) ON DELETE CASCADE
+-- );
+
+-- -- Create product table
+-- CREATE TABLE IF NOT EXISTS product (
+--     id INT AUTO_INCREMENT PRIMARY KEY,
+--     pos_code VARCHAR(255) UNIQUE,
+--     name VARCHAR(255),
+--     price DOUBLE,
+--     stock INT
+-- );
+
+-- -- Insert initial 50 locations for testing
+-- INSERT INTO company (name, email, address, city, state) VALUES ('Default Company', 'info@defaultcompany.com', '123 Main St', 'Anytown', 'CA');
+
+-- -- Insert 50 locations for testing
+-- DELIMITER //
+-- CREATE PROCEDURE create_test_locations()
+-- BEGIN
+--     DECLARE i INT DEFAULT 1;
+--     WHILE i <= 50 DO
+--         INSERT INTO location (name, code, address, city, state, phone, company_id)
+--         VALUES (
+--             CONCAT('Location ', i),
+--             CONCAT('LOC', LPAD(i, 3, '0')),
+--             CONCAT('Address for Location ', i),
+--             CONCAT('City ', (i % 10) + 1),
+--             CONCAT('State ', (i % 5) + 1),
+--             CONCAT('555-', LPAD(i, 4, '0')),
+--             1
+--         );
+--         SET i = i + 1;
+--     END WHILE;
+-- END //
+-- DELIMITER ;
+
+-- CALL create_test_locations();
+-- DROP PROCEDURE create_test_locations;

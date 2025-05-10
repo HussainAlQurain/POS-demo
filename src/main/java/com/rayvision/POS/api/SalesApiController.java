@@ -14,8 +14,12 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
-@RestController
-@RequestMapping("/api/sales")
+/**
+ * DEPRECATED: This controller has been merged into SaleController.
+ * This class is kept for reference but is no longer used in the application.
+ */
+//@RestController
+//@RequestMapping("/api/sales-deprecated")
 public class SalesApiController {
 
     private final PosService posService;
@@ -33,7 +37,7 @@ public class SalesApiController {
      * @param size Page size
      * @return Paginated list of sales
      */
-    @GetMapping
+    //@GetMapping
     public ResponseEntity<Map<String, Object>> getSalesByDateRange(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate,
@@ -65,7 +69,7 @@ public class SalesApiController {
      * @param id Sale ID
      * @return The sale or 404 if not found
      */
-    @GetMapping("/{id}")
+    //@GetMapping("/{id}")
     public ResponseEntity<Sale> getSaleById(@PathVariable Long id) {
         return posService.getSaleById(id)
                 .map(ResponseEntity::ok)
@@ -79,7 +83,7 @@ public class SalesApiController {
      * @param endDate End date (inclusive) 
      * @return Count of sales in the date range
      */
-    @GetMapping("/count")
+    //@GetMapping("/count")
     public ResponseEntity<Map<String, Long>> getSalesCount(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime startDate,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime endDate) {
